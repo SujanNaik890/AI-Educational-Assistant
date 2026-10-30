@@ -3,19 +3,20 @@ import gradio as gr
 from langchain_groq import ChatGroq
 from langchain_community.document_loaders import PyPDFLoader, TextLoader, CSVLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_core.embeddings import Embeddings
 from langchain_community.vectorstores import FAISS
 from langchain_classic.chains.history_aware_retriever import create_history_aware_retriever
 from langchain_classic.chains.retrieval import create_retrieval_chain
 from langchain_classic.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
-# 1. Set Groq API Key and Model
+from backend.embedding import EmbeddingManager
+
+# 1. Groq Setup
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 os.environ["GROQ_API_KEY"] = GROQ_API_KEY
 GROQ_MODEL = os.getenv("GROQ_MODEL_NAME", "openai/gpt-oss-20b")
 
-# Initialize ChatGroq LLM
 llm = ChatGroq(
     model_name=GROQ_MODEL,
     groq_api_key=GROQ_API_KEY,
@@ -23,13 +24,20 @@ llm = ChatGroq(
     max_retries=2
 )
 
-# Shared embedding model cached locally
-print("Loading embeddings...")
-embeddings = HuggingFaceEmbeddings(
-    model_name="all-MiniLM-L6-v2",
-    model_kwargs={"local_files_only": True}
-)
-print("Embeddings loaded.")
+# Wrapper to use fast backend EmbeddingManager
+class FastLocalEmbeddings(Embeddings):
+    def __init__(self):
+        self.mgr = EmbeddingManager()
+
+    def embed_documents(self, texts):
+        arr = self.mgr.encode_texts(texts)
+        return arr.tolist()
+
+    def embed_query(self, text):
+        arr = self.mgr.encode_query(text)
+        return arr[0].tolist()
+
+embeddings = FastLocalEmbeddings()
 
 current_retriever = None
 current_filename = None
@@ -152,7 +160,7 @@ demo = gr.ChatInterface(
 )
 
 if __name__ == "__main__":
-    port = int(os.getenv("GRADIO_SERVER_PORT", "7860"))
+    port = int(os.getenv("GRADIO_SERVER_PORT", "7861"))
     print(f"Launching Gradio on port {port}...")
     demo.launch(
         server_name="127.0.0.1",

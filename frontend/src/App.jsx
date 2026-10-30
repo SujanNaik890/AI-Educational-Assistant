@@ -1,12 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
-import Sidebar from "./components/Sidebar.jsx";
-import TopNav from "./components/TopNav.jsx";
-import ChatArea from "./components/ChatArea.jsx";
-import ChatInput from "./components/ChatInput.jsx";
-import AgentsView from "./components/AgentsView.jsx";
-import WorkflowsView from "./components/WorkflowsView.jsx";
-import HistoryView from "./components/HistoryView.jsx";
+import RevaTopNav from "./components/RevaTopNav.jsx";
+import RevaSidebar from "./components/RevaSidebar.jsx";
+import StudentDashboard from "./components/StudentDashboard.jsx";
+import EduPilotDrawer from "./components/EduPilotDrawer.jsx";
 import FileUploadModal from "./components/FileUploadModal.jsx";
 import SettingsModal from "./components/SettingsModal.jsx";
 import { useVoice } from "./hooks/useVoice.js";
@@ -14,33 +11,31 @@ import { useVoice } from "./hooks/useVoice.js";
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8008";
 
 export default function App() {
-  const [activeNav, setActiveNav] = useState("chat"); // "chat" | "agents" | "workflows" | "history"
-  const [agentMode, setAgentMode] = useState(true);
-  const [ragEnabled, setRagEnabled] = useState(true);
+  const [activeSidebarItem, setActiveSidebarItem] = useState("home");
+  const [isEduPilotOpen, setIsEduPilotOpen] = useState(true);
   const [currentDoc, setCurrentDoc] = useState(null);
   const [health, setHealth] = useState(null);
 
-  // User Profile
-  const [userName, setUserName] = useState("Sujan Naik");
-  const [userInitials, setUserInitials] = useState("SG");
-
-  // Voice & Audio
-  const [speechRate, setSpeechRate] = useState(1.0);
-  const [autoReadAloud, setAutoReadAloud] = useState(false);
+  // Student Profile
+  const [userName, setUserName] = useState("Sujan Gajanan Naik");
+  const [userRole, setUserRole] = useState("III Semester, CSE");
 
   // Modals
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // Chat State
+  // Chat State inside EduPilot AI
   const [messages, setMessages] = useState([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingAnswer, setStreamingAnswer] = useState("");
-  const [historyList, setHistoryList] = useState([]);
+  const [isReadingScreen, setIsReadingScreen] = useState(false);
+
+  // Voice
+  const [speechRate, setSpeechRate] = useState(1.0);
+  const [autoReadAloud, setAutoReadAloud] = useState(false);
 
   const abortControllerRef = useRef(null);
 
-  // Voice Hook
   const {
     isListening,
     isSpeaking,
@@ -51,13 +46,13 @@ export default function App() {
     stopSpeaking,
   } = useVoice({
     onTranscript: (text, isFinal) => {
-      // If final, send or let user review
       if (isFinal) {
         handleSendMessage(text);
       }
     },
   });
 
+  // Fetch initial health and current active doc
   const fetchStatus = async () => {
     try {
       const [docRes, healthRes] = await Promise.all([
@@ -67,295 +62,200 @@ export default function App() {
       setCurrentDoc(docRes.data);
       setHealth(healthRes.data);
     } catch (err) {
-      console.error("Error fetching system status:", err);
+      console.error("Status fetch error:", err);
     }
   };
 
   useEffect(() => {
     fetchStatus();
-    const timer = setInterval(fetchStatus, 30000);
-    return () => clearInterval(timer);
+    const interval = setInterval(fetchStatus, 30000);
+    return () => clearInterval(interval);
   }, []);
 
-  const handleUpdateUserName = (newName) => {
-    setUserName(newName);
-    const parts = newName.trim().split(" ");
-    if (parts.length >= 2) {
-      setUserInitials((parts[0][0] + parts[1][0]).toUpperCase());
-    } else if (newName.length > 0) {
-      setUserInitials(newName.slice(0, 2).toUpperCase());
-    }
-  };
+  // Send message to FastAPI Backend (Groq with Ollama fallback)
+  const handleSendMessage = async (text) => {
+    if (!text || !text.trim() || isStreaming) return;
+    const query = text.trim();
 
-  // Chat Stream Handler
-  const handleSendMessage = async (text, options = {}) => {
-    const q = text.trim();
-    if (!q) return;
-    const useDocument =
-      options.forceRag || ragEnabled || currentDoc?.status === "ready";
-
-    // No longer block chat when no document is uploaded.
-    // The backend handles both modes: RAG (with document) and direct chat (without).
-
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
-
-    const userMsg = {
-      id: Date.now(),
-      sender: "user",
-      text: q,
-      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-    };
-
+    const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const userMsg = { sender: "user", text: query, timestamp };
     setMessages((prev) => [...prev, userMsg]);
     setIsStreaming(true);
     setStreamingAnswer("");
 
-    let currentMeta = {
-      primary_page: null,
-      confidence_pct: null,
-      source_match_pct: null,
-      sources: [],
-    };
-    let accumulatedText = "";
-
     try {
+      abortControllerRef.current = new AbortController();
       const response = await fetch(`${API_BASE}/ask/stream`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          question: q,
-          rag_enabled: useDocument,
+          question: query,
+          rag_enabled: !!(currentDoc && currentDoc.status === "ready"),
         }),
-        signal: controller.signal,
+        signal: abortControllerRef.current.signal,
       });
 
       if (!response.ok) {
-        const errJson = await response.json().catch(() => ({}));
-        throw new Error(errJson.detail || `Server error: ${response.status}`);
-      }
-
-      if (!response.body) {
-        throw new Error("No readable response stream received from backend.");
+        throw new Error(`Server returned ${response.status}`);
       }
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder("utf-8");
-      let buffer = "";
-
-      const processEvent = (eventText) => {
-        const lines = eventText.split("\n");
-        const dataLines = lines
-          .filter((line) => line.startsWith("data:"))
-          .map((line) => line.slice(5).replace(/^ /, ""))
-          .join("\n");
-
-        if (!dataLines) return;
-
-        try {
-          const payload = JSON.parse(dataLines);
-          if (payload.type === "meta") {
-            currentMeta = {
-              primary_page: payload.primary_page,
-              confidence_pct: payload.confidence_pct,
-              source_match_pct: payload.source_match_pct,
-              sources: payload.sources || [],
-            };
-          } else if (payload.type === "token") {
-            accumulatedText += payload.token;
-            setStreamingAnswer(accumulatedText);
-          } else if (payload.type === "error") {
-            accumulatedText += `\n[Note: ${payload.message}]`;
-            setStreamingAnswer(accumulatedText);
-          }
-        } catch (_) {}
-      };
+      let fullBotAnswer = "";
 
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
 
-        buffer += decoder.decode(value, { stream: true });
-        const events = buffer.split("\n\n");
-        buffer = events.pop() || "";
-        for (const ev of events) {
-          processEvent(ev);
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split("\n");
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const rawData = line.slice(6).trim();
+            if (!rawData) continue;
+
+            try {
+              const parsed = JSON.parse(rawData);
+              if (parsed.type === "token" && parsed.token) {
+                fullBotAnswer += parsed.token;
+                setStreamingAnswer(fullBotAnswer);
+              } else if (parsed.type === "done") {
+                // Done event
+              }
+            } catch (jsonErr) {
+              // Non-JSON SSE string
+            }
+          }
         }
       }
 
-      if (buffer.trim()) {
-        processEvent(buffer);
-      }
-
-      const finalText = accumulatedText.trim() || "No response generated.";
-
-      const aiMsg = {
-        id: Date.now() + 1,
-        sender: "agent",
-        text: finalText,
-        meta: currentMeta,
+      const botMsg = {
+        sender: "bot",
+        text: fullBotAnswer || "I've reviewed your request.",
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       };
+      setMessages((prev) => [...prev, botMsg]);
+      setStreamingAnswer("");
 
-      setMessages((prev) => [...prev, aiMsg]);
-
-      // Add to History
-      setHistoryList((prev) => [
-        {
-          query: q,
-          snippet: finalText.slice(0, 100) + "...",
-          timestamp: new Date().toLocaleDateString() + " " + userMsg.timestamp,
-        },
-        ...prev,
-      ]);
-
-      // Auto Read Aloud if enabled
-      if (autoReadAloud) {
-        speakText(finalText, { rate: speechRate });
+      if (autoReadAloud && fullBotAnswer) {
+        speakText(fullBotAnswer, speechRate);
       }
     } catch (err) {
       if (err.name !== "AbortError") {
-        const errorAiMsg = {
-          id: Date.now() + 2,
-          sender: "agent",
-          text: `⚠️ Could not complete generation: ${err.message}`,
-          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        };
-        setMessages((prev) => [...prev, errorAiMsg]);
+        console.error("Ask error:", err);
+        setMessages((prev) => [
+          ...prev,
+          {
+            sender: "bot",
+            text: `⚠️ Error generating response: ${err.message}`,
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          },
+        ]);
       }
     } finally {
       setIsStreaming(false);
-      setStreamingAnswer("");
+      abortControllerRef.current = null;
     }
   };
 
-  const handleDocUpdated = (newDocInfo) => {
-    setCurrentDoc(newDocInfo);
-    setRagEnabled(true);
-    setActiveNav("chat");
-    if (newDocInfo?.status === "ready" && newDocInfo?.filename) {
-      handleSendMessage(
-        `Read the uploaded file "${newDocInfo.filename}" thoroughly and give a detailed explanation of the whole document. Cover its purpose, structure, main topics, key concepts, and how a student should study it. Then keep answering questions in this same chat.`,
-        { forceRag: true }
-      );
+  // Screen Reading Feature: Extracts visible text and asks EduPilot AI
+  const handleReadScreen = () => {
+    setIsReadingScreen(true);
+    try {
+      const portalElem = document.getElementById("screen-portal-content");
+      let screenText = "";
+      if (portalElem) {
+        screenText = portalElem.innerText;
+      } else {
+        screenText = document.body.innerText;
+      }
+
+      // Compact whitespace
+      const cleanText = screenText.replace(/\s+/g, " ").trim().slice(0, 3500);
+
+      const prompt = `[READ SCREEN CONTEXT]
+Here is the visible content on my student portal dashboard:
+"""
+${cleanText}
+"""
+Please explain this dashboard to me in simple terms:
+1. Explain my current semester courses, grades, and progress percentages.
+2. Outline today's scheduled class sessions and instructors.
+3. Highlight recent announcements or deadlines.
+4. Give me a clear, prioritized study recommendation based on what needs attention.`;
+
+      handleSendMessage(prompt);
+    } catch (e) {
+      console.error("Read screen error:", e);
+    } finally {
+      setTimeout(() => setIsReadingScreen(false), 800);
     }
   };
 
-  const handlePromptClick = (prompt, action) => {
-    if (action === "mcq") {
-      setActiveNav("agents");
-      return;
-    }
-    handleSendMessage(prompt);
-  };
-
-  const handleQuickAction = (action) => {
-    if (action === "mcq") {
-      setActiveNav("agents");
-    } else if (action === "summarize") {
-      handleSendMessage(
-        "Summarize the key principles and concepts from this textbook in concise bullet points."
-      );
-    }
+  const handleDocUpdated = (newDoc) => {
+    setCurrentDoc(newDoc);
+    fetchStatus();
   };
 
   return (
-    <div className="agent-app-shell">
-      {/* Left Sidebar */}
-      <Sidebar
-        activeNav={activeNav}
-        onSelectNav={setActiveNav}
-        onOpenSettings={() => setIsSettingsOpen(true)}
+    <div className="reva-app-container">
+      {/* Top University Navigation Header */}
+      <RevaTopNav
         userName={userName}
-        userInitials={userInitials}
+        userRole={userRole}
+        isEduPilotOpen={isEduPilotOpen}
+        onToggleEduPilot={() => setIsEduPilotOpen((prev) => !prev)}
       />
 
-      {/* Main Workspace Area */}
-      <div className="agent-workspace-container">
-        {/* Top Bar with Agent Mode & Document Status */}
-        <TopNav
-          agentMode={agentMode}
-          onToggleAgentMode={setAgentMode}
-          currentDoc={currentDoc}
-          health={health}
-          onOpenFileUpload={() => setIsUploadOpen(true)}
+      {/* Main Workspace: Sidebar + Dashboard + EduPilot AI Drawer */}
+      <div className="reva-workspace-body">
+        {/* Left Sidebar */}
+        <RevaSidebar
+          activeItem={activeSidebarItem}
+          onSelectItem={(item) => {
+            setActiveSidebarItem(item);
+            if (item === "profile" || item === "help") {
+              setIsSettingsOpen(true);
+            }
+          }}
         />
 
-        {/* Dynamic View Body */}
-        <main className="agent-main-content">
-          {activeNav === "chat" && (
-            <div className="chat-layout-wrapper">
-              {/* Messages / Welcome View */}
-              <ChatArea
-                messages={messages}
-                isStreaming={isStreaming}
-                streamingAnswer={streamingAnswer}
-                currentDoc={currentDoc}
-                onPromptClick={handlePromptClick}
-                onSpeak={(text) => speakText(text, { rate: speechRate })}
-                onStopSpeak={stopSpeaking}
-                isSpeaking={isSpeaking}
-                userInitials={userInitials}
-              />
-
-              {/* Bottom Floating Input Bar */}
-              <ChatInput
-                onSendMessage={handleSendMessage}
-                onOpenFileUpload={() => setIsUploadOpen(true)}
-                onQuickAction={handleQuickAction}
-                currentDoc={currentDoc}
-                ragEnabled={ragEnabled}
-                onToggleRag={() => setRagEnabled((prev) => !prev)}
-                isListening={isListening}
-                onToggleVoice={toggleListening}
-                voiceSupported={speechSupported}
-                volumeLevel={volumeLevel}
-                disabled={isStreaming}
-              />
-            </div>
-          )}
-
-          {activeNav === "agents" && (
-            <AgentsView
-              currentDoc={currentDoc}
-              onStartChatWithPrompt={(prompt) => {
-                setActiveNav("chat");
-                handleSendMessage(prompt);
-              }}
-            />
-          )}
-
-          {activeNav === "workflows" && (
-            <WorkflowsView
-              currentDoc={currentDoc}
-              onExecuteWorkflow={(prompt, action) => {
-                if (action === "mcq") {
-                  setActiveNav("agents");
-                } else {
-                  setActiveNav("chat");
-                  handleSendMessage(prompt);
-                }
-              }}
-            />
-          )}
-
-          {activeNav === "history" && (
-            <HistoryView
-              history={historyList}
-              onSelectSession={(item) => {
-                setActiveNav("chat");
-                handleSendMessage(item.query);
-              }}
-              onClearHistory={() => setHistoryList([])}
-            />
-          )}
+        {/* Center Canvas: Student Dashboard */}
+        <main className={`reva-content-canvas ${isEduPilotOpen ? "drawer-active" : "full-width"}`}>
+          <StudentDashboard
+            onSelectCourse={(courseName) => {
+              setIsEduPilotOpen(true);
+              handleSendMessage(`Give me a comprehensive overview, syllabus breakdown, and key exam questions for ${courseName}.`);
+            }}
+            onQuickPrompt={(prompt) => {
+              setIsEduPilotOpen(true);
+              handleSendMessage(prompt);
+            }}
+          />
         </main>
+
+        {/* Right Side Drawer: EduPilot AI Assistant */}
+        <EduPilotDrawer
+          isOpen={isEduPilotOpen}
+          onClose={() => setIsEduPilotOpen(false)}
+          messages={messages}
+          isStreaming={isStreaming}
+          streamingAnswer={streamingAnswer}
+          onSendMessage={handleSendMessage}
+          onReadScreen={handleReadScreen}
+          isReadingScreen={isReadingScreen}
+          onOpenFileUpload={() => setIsUploadOpen(true)}
+          currentDoc={currentDoc}
+          onReadAloud={(text) => speakText(text, speechRate)}
+          isSpeaking={isSpeaking}
+          onToggleVoice={toggleListening}
+          isListening={isListening}
+          voiceSupported={speechSupported}
+        />
       </div>
 
-      {/* File Upload Modal */}
+      {/* Educational File Upload Modal (PDF, TXT, CSV) */}
       <FileUploadModal
         isOpen={isUploadOpen}
         onClose={() => setIsUploadOpen(false)}
@@ -368,7 +268,7 @@ export default function App() {
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         userName={userName}
-        onUpdateUserName={handleUpdateUserName}
+        onUpdateUserName={setUserName}
         speechRate={speechRate}
         onUpdateSpeechRate={setSpeechRate}
         autoReadAloud={autoReadAloud}
