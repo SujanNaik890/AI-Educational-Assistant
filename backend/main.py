@@ -56,11 +56,9 @@ def get_allowed_origins(raw_origins: Optional[str] = None) -> List[str]:
     return parsed or list(DEFAULT_FRONTEND_ORIGINS)
 
 
-allowed_origins = get_allowed_origins()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_origin_regex=r"https://.*\.onrender\.com",
+    allow_origins=["*"],
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -1,5 +1,9 @@
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Load .env file automatically if present
+load_dotenv()
 
 # Base Paths
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -36,7 +40,7 @@ OLLAMA_MODEL_NAME = os.getenv("OLLAMA_MODEL_NAME", "llama3.2:3b")
 
 # Groq settings for cloud deployment
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
-GROQ_MODEL_NAME = os.getenv("GROQ_MODEL_NAME", "llama-3.3-70b-versatile")
+GROQ_MODEL_NAME = os.getenv("GROQ_MODEL_NAME", "openai/gpt-oss-20b")
 
 # Keep MODEL_NAME for existing imports while exposing the selected model clearly.
 ACTIVE_MODEL_NAME = {
