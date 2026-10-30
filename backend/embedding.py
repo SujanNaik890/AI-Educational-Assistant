@@ -39,7 +39,7 @@ class EmbeddingManager:
                     import torch
                     # Conserve threads and memory pool allocations on single-core / low-RAM hosts
                     torch.set_num_threads(1)
-                    self._model = SentenceTransformer(EMBEDDING_MODEL_NAME)
+                    self._model = SentenceTransformer(EMBEDDING_MODEL_NAME, local_files_only=True)
                     dur = time.perf_counter() - start_t
                     logger.info("[EmbeddingManager] Loaded %s in %.2fs (Kept resident in memory).", EMBEDDING_MODEL_NAME, dur)
 

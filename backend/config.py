@@ -24,12 +24,12 @@ CURRENT_DOC_PATH = VECTOR_STORE_DIR / "current_document.json"
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 150
 EMBEDDING_MODEL_NAME = "all-MiniLM-L6-v2"
-TOP_K = 4
-MAX_CONTEXT_CHUNKS = 5
-
+TOP_K = 5
+MAX_CONTEXT_CHUNKS = 7
+ANSWER_MAX_TOKENS = 1400
 
 # LLM Settings
-LLM_PROVIDER = os.getenv("LLM_PROVIDER", "ollama").lower()
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "groq").lower()
 
 # Ollama settings for local development
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
@@ -37,7 +37,7 @@ OLLAMA_MODEL_NAME = os.getenv("OLLAMA_MODEL_NAME", "llama3.2:3b")
 
 # Groq settings for cloud deployment
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
-GROQ_MODEL_NAME = os.getenv("GROQ_MODEL_NAME", "openai/gpt-oss-120b")
+GROQ_MODEL_NAME = os.getenv("GROQ_MODEL_NAME", "openai/gpt-oss-20b")
 
 # Keep MODEL_NAME for existing imports while exposing the selected model clearly.
 ACTIVE_MODEL_NAME = {
@@ -48,4 +48,4 @@ MODEL_NAME = os.getenv("MODEL_NAME", ACTIVE_MODEL_NAME)
 
 TEMPERATURE = 0.2
 MCQ_TEMPERATURE = 0.1
-OLLAMA_TIMEOUT = 180  # seconds
+OLLAMA_TIMEOUT = 120

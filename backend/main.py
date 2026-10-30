@@ -68,6 +68,7 @@ app.add_middleware(
 # Request Models
 class QuestionRequest(BaseModel):
     question: str
+    rag_enabled: Optional[bool] = True
 
 class MCQRequest(BaseModel):
     topic: str
@@ -225,17 +226,51 @@ async def upload_pdf(file: UploadFile = File(...)):
 
 @app.post("/ask")
 def ask_question(req: QuestionRequest):
-    if not vector_store.has_active_document():
-        raise HTTPException(
-            status_code=400,
-            detail="Please upload a textbook PDF first."
-        )
-
     q = req.question.strip()
     if not q:
         raise HTTPException(status_code=400, detail="Question cannot be empty.")
 
     t_start = time.perf_counter()
+    use_rag = bool(req.rag_enabled and vector_store.has_active_document())
+
+    if not use_rag:
+        try:
+            answer, llm_sec = llm_client.generate_direct_sync(q)
+        except ProviderUnavailableError:
+            raise HTTPException(
+                status_code=503,
+                detail="The configured AI provider is unavailable. Please check the provider configuration and try again.",
+            )
+        except LLMGenerationError:
+            raise HTTPException(
+                status_code=502,
+                detail="The configured AI provider could not generate a response. Please try again.",
+            )
+        except Exception as e:
+            logger.error("Direct Q&A generation failed (%s).", type(e).__name__)
+            raise HTTPException(
+                status_code=500,
+                detail="An unexpected error occurred while generating the answer.",
+            )
+
+        total_sec = round(time.perf_counter() - t_start, 4)
+        return JSONResponse(
+            content={
+                "question": q,
+                "answer": answer,
+                "primary_page": None,
+                "confidence_pct": None,
+                "source_match_pct": None,
+                "sources": [],
+                "timing": {
+                    "embedding_sec": 0,
+                    "retrieval_sec": 0,
+                    "llm_sec": llm_sec,
+                    "total_sec": total_sec,
+                },
+            },
+            headers={"Content-Type": "application/json; charset=utf-8"},
+        )
 
     # 1. Retrieve relevant chunks & calculate evidence confidence
     chunks, metrics = retriever.retrieve(q, top_k=TOP_K)
@@ -313,12 +348,6 @@ def ask_question(req: QuestionRequest):
 
 @app.post("/ask/stream")
 def ask_question_stream(req: QuestionRequest):
-    if not vector_store.has_active_document():
-        raise HTTPException(
-            status_code=400,
-            detail="Please upload a textbook PDF first."
-        )
-
     q = req.question.strip()
     if not q:
         raise HTTPException(status_code=400, detail="Question cannot be empty.")
@@ -326,6 +355,37 @@ def ask_question_stream(req: QuestionRequest):
     def event_stream():
         t_start = time.perf_counter()
         try:
+            use_rag = bool(req.rag_enabled and vector_store.has_active_document())
+
+            if not use_rag:
+                init_payload = {
+                    "type": "meta",
+                    "primary_page": None,
+                    "confidence_pct": None,
+                    "source_match_pct": None,
+                    "sources": [],
+                    "embedding_sec": 0,
+                    "retrieval_sec": 0,
+                }
+                yield f"data: {json.dumps(init_payload)}\n\n"
+
+                t_llm_start = time.perf_counter()
+                for token in llm_client.generate_direct_stream(q):
+                    yield f"data: {json.dumps({'type': 'token', 'token': token})}\n\n"
+
+                done_payload = {
+                    "type": "done",
+                    "status": "completed",
+                    "timing": {
+                        "embedding_sec": 0,
+                        "retrieval_sec": 0,
+                        "llm_sec": round(time.perf_counter() - t_llm_start, 4),
+                        "total_sec": round(time.perf_counter() - t_start, 4),
+                    },
+                }
+                yield f"data: {json.dumps(done_payload)}\n\n"
+                return
+
             chunks, metrics = retriever.retrieve(q, top_k=TOP_K)
 
             sources = [
@@ -351,12 +411,20 @@ def ask_question_stream(req: QuestionRequest):
             yield f"data: {json.dumps(init_payload)}\n\n"
 
             if not chunks or not metrics.get("is_grounded", False):
-                token_payload = {
-                    "type": "token",
-                    "token": "I could not find sufficient information about this topic in the uploaded textbook.",
+                t_llm_start = time.perf_counter()
+                for token in llm_client.generate_direct_stream(q):
+                    yield f"data: {json.dumps({'type': 'token', 'token': token})}\n\n"
+                done_payload = {
+                    "type": "done",
+                    "status": "completed",
+                    "timing": {
+                        "embedding_sec": metrics.get("embedding_sec", 0),
+                        "retrieval_sec": metrics.get("retrieval_sec", 0),
+                        "llm_sec": round(time.perf_counter() - t_llm_start, 4),
+                        "total_sec": round(time.perf_counter() - t_start, 4),
+                    },
                 }
-                yield f"data: {json.dumps(token_payload)}\n\n"
-                yield f"data: {json.dumps({'type': 'done', 'status': 'completed', 'total_sec': round(time.perf_counter() - t_start, 4)})}\n\n"
+                yield f"data: {json.dumps(done_payload)}\n\n"
                 return
 
             t_llm_start = time.perf_counter()
