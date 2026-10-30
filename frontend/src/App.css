@@ -2812,3 +2812,599 @@ input:checked + .switch-slider:before {
   color: #94a3b8;
   text-align: center;
 }
+
+
+/* ==========================================================================
+   COURSE DETAIL VIEW & GENERIC PORTAL TABS STYLING (MATCHING SCREENSHOT 2)
+   ========================================================================== */
+
+/* Breadcrumb nav */
+.course-detail-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.course-detail-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  padding: 12px 20px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.back-to-dashboard-btn {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.back-to-dashboard-btn:hover {
+  background: #dbeafe;
+}
+
+.course-nav-crumbs {
+  font-size: 13px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.crumb-sep {
+  color: #cbd5e1;
+}
+
+.crumb-active {
+  color: #0f172a;
+}
+
+/* Accordion Card */
+.detail-accordion-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.accordion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  background: #ffffff;
+  border-bottom: 1px solid #f1f5f9;
+  cursor: pointer;
+  user-select: none;
+}
+
+.accordion-header:hover {
+  background: #f8fafc;
+}
+
+.accordion-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.accordion-arrow {
+  font-size: 11px;
+  color: #64748b;
+  transition: transform 0.2s ease;
+}
+
+.accordion-arrow.open {
+  transform: rotate(0deg);
+}
+
+.accordion-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.accordion-collapse-label {
+  font-size: 12px;
+  color: #2563eb;
+  font-weight: 500;
+}
+
+.accordion-body-content {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.announcement-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.link-btn-text {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #2563eb;
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+}
+
+.link-btn-text:hover {
+  text-decoration: underline;
+}
+
+/* Course Overview Canvas inside Accordion */
+.course-overview-canvas {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  background: #f8fafc;
+}
+
+/* Big Blue Hero Header */
+.course-blue-hero {
+  background: #1e3a8a;
+  background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
+  color: #ffffff;
+  padding: 28px 24px;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(30, 58, 138, 0.15);
+}
+
+.hero-course-title {
+  font-size: 24px;
+  font-weight: 800;
+  margin: 0 0 8px 0;
+  letter-spacing: -0.3px;
+}
+
+.hero-course-subtitle {
+  font-size: 13.5px;
+  color: #dbeafe;
+  margin: 0;
+  font-weight: 400;
+}
+
+/* 4 Feature Meta Badges */
+.course-meta-chips-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.meta-chip {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.meta-chip.chip-code { border-top: 3px solid #2563eb; }
+.meta-chip.chip-credits { border-top: 3px solid #10b981; }
+.meta-chip.chip-type { border-top: 3px solid #8b5cf6; }
+.meta-chip.chip-sem { border-top: 3px solid #f97316; }
+
+.chip-label {
+  font-size: 11.5px;
+  color: #64748b;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.chip-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* White Section Cards */
+.detail-white-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.section-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.section-icon {
+  font-size: 16px;
+}
+
+.section-heading {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.section-body-text {
+  font-size: 13.5px;
+  color: #334155;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.bulleted-list {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 13.5px;
+  color: #334155;
+  line-height: 1.6;
+}
+
+/* CLO Grid */
+.clo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.clo-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.clo-id {
+  font-size: 12px;
+  font-weight: 700;
+  color: #2563eb;
+  margin-bottom: 4px;
+  display: inline-block;
+}
+
+.clo-desc {
+  font-size: 12.5px;
+  color: #475569;
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* Unit-wise course contents */
+.units-accordion-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.unit-item-box {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px;
+  transition: all 0.2s;
+}
+
+.unit-item-box:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.unit-header-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.unit-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.unit-tag {
+  background: #f1f5f9;
+  color: #1e293b;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.unit-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.study-with-agent-btn {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.study-with-agent-btn:hover {
+  background: #dbeafe;
+}
+
+.unit-summary-text {
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.5;
+  margin: 0 0 10px 0;
+}
+
+.unit-notes-attachment {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.notes-icon {
+  font-size: 16px;
+}
+
+.notes-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #2563eb;
+  flex: 1;
+}
+
+.read-notes-btn {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.read-notes-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.textbook-list {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.6;
+}
+
+/* Footer Banner */
+.course-blue-footer-banner {
+  background: #1e3a8a;
+  color: #ffffff;
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+}
+
+.course-blue-footer-banner h3 {
+  margin: 0 0 4px 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.course-blue-footer-banner p {
+  margin: 0;
+  font-size: 12.5px;
+  color: #93c5fd;
+}
+
+/* --- Generic Portal Views (Tabs) --- */
+.portal-generic-view {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.section-top-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px 24px;
+}
+
+.section-view-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 4px 0;
+}
+
+.section-view-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}
+
+.results-stat-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.stat-pill {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-num {
+  font-size: 22px;
+  font-weight: 800;
+  color: #2563eb;
+}
+
+.stat-label {
+  font-size: 11.5px;
+  color: #64748b;
+}
+
+
+/* ==========================================================================
+   OFFICIAL CHATGPT-STYLE MARKDOWN & TABLE FORMATTING
+   ========================================================================== */
+
+.gpt-official-message-card {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #1f2937;
+  font-size: 13.5px;
+  line-height: 1.65;
+  letter-spacing: -0.01em;
+}
+
+.gpt-clean-markdown-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.gpt-heading {
+  font-weight: 700;
+  color: #111827;
+  margin: 14px 0 6px 0;
+  line-height: 1.35;
+}
+
+.gpt-heading.h1 {
+  font-size: 17px;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 6px;
+}
+
+.gpt-heading.h2 {
+  font-size: 15.5px;
+}
+
+.gpt-heading.h3 {
+  font-size: 14px;
+  color: #1e40af;
+  margin-top: 10px;
+}
+
+.gpt-heading.h4 {
+  font-size: 13px;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.gpt-paragraph {
+  margin: 0;
+  color: #374151;
+  font-size: 13.5px;
+  line-height: 1.65;
+}
+
+.gpt-list {
+  margin: 2px 0 8px 0;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: #374151;
+}
+
+.gpt-list li {
+  line-height: 1.55;
+}
+
+/* ChatGPT Styled Clean Table */
+.md-table-wrapper {
+  margin: 12px 0;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  overflow-x: auto;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  background: #ffffff;
+}
+
+.gpt-styled-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 12.5px;
+}
+
+.gpt-styled-table th {
+  background: #f9fafb;
+  color: #374151;
+  font-weight: 600;
+  padding: 10px 12px;
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+}
+
+.gpt-styled-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f3f4f6;
+  color: #4b5563;
+  vertical-align: top;
+  line-height: 1.5;
+}
+
+.gpt-styled-table tr:last-child td {
+  border-bottom: none;
+}
+
+.gpt-styled-table tr:hover td {
+  background: #f8fafc;
+}
+
+.source-citation-badge {
+  display: inline-block;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  margin: 0 2px;
+}

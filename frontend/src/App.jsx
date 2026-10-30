@@ -3,6 +3,8 @@ import axios from "axios";
 import RevaTopNav from "./components/RevaTopNav.jsx";
 import RevaSidebar from "./components/RevaSidebar.jsx";
 import StudentDashboard from "./components/StudentDashboard.jsx";
+import CourseDetailView from "./components/CourseDetailView.jsx";
+import GenericSectionView from "./components/GenericSectionView.jsx";
 import EduPilotDrawer from "./components/EduPilotDrawer.jsx";
 import FileUploadModal from "./components/FileUploadModal.jsx";
 import SettingsModal from "./components/SettingsModal.jsx";
@@ -12,6 +14,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8008";
 
 export default function App() {
   const [activeSidebarItem, setActiveSidebarItem] = useState("home");
+  const [selectedCourse, setSelectedCourse] = useState(null); // When user clicks a course
   const [isEduPilotOpen, setIsEduPilotOpen] = useState(true);
   const [currentDoc, setCurrentDoc] = useState(null);
   const [health, setHealth] = useState(null);
@@ -121,10 +124,10 @@ export default function App() {
                 fullBotAnswer += parsed.token;
                 setStreamingAnswer(fullBotAnswer);
               } else if (parsed.type === "done") {
-                // Done event
+                // Completed
               }
             } catch (jsonErr) {
-              // Non-JSON SSE string
+              // Ignore non-json SSE frames
             }
           }
         }
@@ -163,27 +166,32 @@ export default function App() {
   const handleReadScreen = () => {
     setIsReadingScreen(true);
     try {
-      const portalElem = document.getElementById("screen-portal-content");
       let screenText = "";
-      if (portalElem) {
+      const courseElem = document.querySelector(".course-detail-page");
+      const portalElem = document.getElementById("screen-portal-content");
+      const genericElem = document.querySelector(".portal-generic-view");
+
+      if (courseElem) {
+        screenText = courseElem.innerText;
+      } else if (portalElem) {
         screenText = portalElem.innerText;
+      } else if (genericElem) {
+        screenText = genericElem.innerText;
       } else {
         screenText = document.body.innerText;
       }
 
-      // Compact whitespace
       const cleanText = screenText.replace(/\s+/g, " ").trim().slice(0, 3500);
 
       const prompt = `[READ SCREEN CONTEXT]
-Here is the visible content on my student portal dashboard:
+Here is the visible content currently displayed on my university screen:
 """
 ${cleanText}
 """
-Please explain this dashboard to me in simple terms:
-1. Explain my current semester courses, grades, and progress percentages.
-2. Outline today's scheduled class sessions and instructors.
-3. Highlight recent announcements or deadlines.
-4. Give me a clear, prioritized study recommendation based on what needs attention.`;
+Please explain what is on this screen in simple, clear terms:
+1. Identify the main subject or portal section being viewed.
+2. Summarize the key topics, syllabus units, or deadlines shown.
+3. Highlight high-scoring exam points or urgent actions for a student.`;
 
       handleSendMessage(prompt);
     } catch (e) {
@@ -198,6 +206,12 @@ Please explain this dashboard to me in simple terms:
     fetchStatus();
   };
 
+  const handleCourseClick = (courseName) => {
+    setSelectedCourse(courseName);
+    setIsEduPilotOpen(true);
+    handleSendMessage(`I've opened the course page for "${courseName}". Give me a clear summary of its syllabus, units, and tips to score well in exams.`);
+  };
+
   return (
     <div className="reva-app-container">
       {/* Top University Navigation Header */}
@@ -208,31 +222,49 @@ Please explain this dashboard to me in simple terms:
         onToggleEduPilot={() => setIsEduPilotOpen((prev) => !prev)}
       />
 
-      {/* Main Workspace: Sidebar + Dashboard + EduPilot AI Drawer */}
+      {/* Main Workspace: Sidebar + Dashboard/Course View + EduPilot AI Drawer */}
       <div className="reva-workspace-body">
         {/* Left Sidebar */}
         <RevaSidebar
           activeItem={activeSidebarItem}
           onSelectItem={(item) => {
             setActiveSidebarItem(item);
+            setSelectedCourse(null); // Reset detail view when moving between tabs
             if (item === "profile" || item === "help") {
               setIsSettingsOpen(true);
             }
           }}
         />
 
-        {/* Center Canvas: Student Dashboard */}
+        {/* Center Canvas */}
         <main className={`reva-content-canvas ${isEduPilotOpen ? "drawer-active" : "full-width"}`}>
-          <StudentDashboard
-            onSelectCourse={(courseName) => {
-              setIsEduPilotOpen(true);
-              handleSendMessage(`Give me a comprehensive overview, syllabus breakdown, and key exam questions for ${courseName}.`);
-            }}
-            onQuickPrompt={(prompt) => {
-              setIsEduPilotOpen(true);
-              handleSendMessage(prompt);
-            }}
-          />
+          {selectedCourse ? (
+            <CourseDetailView
+              courseName={selectedCourse}
+              onBack={() => setSelectedCourse(null)}
+              onAskAgent={(prompt) => {
+                setIsEduPilotOpen(true);
+                handleSendMessage(prompt);
+              }}
+            />
+          ) : activeSidebarItem === "home" ? (
+            <StudentDashboard
+              onSelectCourse={handleCourseClick}
+              onQuickPrompt={(prompt) => {
+                setIsEduPilotOpen(true);
+                handleSendMessage(prompt);
+              }}
+            />
+          ) : (
+            <GenericSectionView
+              activeTab={activeSidebarItem}
+              onSelectCourse={handleCourseClick}
+              onAskAgent={(prompt) => {
+                setIsEduPilotOpen(true);
+                handleSendMessage(prompt);
+              }}
+            />
+          )}
         </main>
 
         {/* Right Side Drawer: EduPilot AI Assistant */}

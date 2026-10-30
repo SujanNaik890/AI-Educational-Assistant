@@ -44,7 +44,8 @@ class EducationalRetriever:
             "key points", "table of contents", "what does this cover",
             "explain the document", "explain this document", "detailed explanation",
             "read the file", "read the uploaded", "read this document",
-            "what is this document", "explain the uploaded",
+            "what is this document", "explain the uploaded", "read the contents",
+            "contents of", "read the", "read this", ".pdf", "week 5", "week-5"
         ])
 
         raw_results = vector_store.search(query_vec, top_k=10)

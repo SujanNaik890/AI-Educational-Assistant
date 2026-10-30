@@ -1,15 +1,23 @@
 import React from "react";
 
 function renderInline(text) {
+  if (!text) return [];
+  // Clean unusual non-standard symbols and non-breaking spaces
+  const sanitized = text
+    .replace(/\u202f/g, " ")
+    .replace(/\u00a0/g, " ")
+    .replace(/Ø/g, "•")
+    .replace(/[\u200B-\u200D\uFEFF]/g, "");
+
   const parts = [];
-  const pattern = /(\*\*[^*]+?\*\*|`[^`]+?`|\[[^\]]+\]\([^)]+\))/g;
+  const pattern = /(\*\*[^*]+?\*\*|`[^`]+?`|\[[^\]]+\]\([^)]+\)|\[Source\s+\d+[^\]]*\])/g;
   let lastIndex = 0;
   let match;
   let key = 0;
 
-  while ((match = pattern.exec(text)) !== null) {
+  while ((match = pattern.exec(sanitized)) !== null) {
     if (match.index > lastIndex) {
-      parts.push(text.slice(lastIndex, match.index));
+      parts.push(sanitized.slice(lastIndex, match.index));
     }
     const token = match[0];
     if (token.startsWith("**")) {
@@ -19,6 +27,12 @@ function renderInline(text) {
         <code key={key++} className="inline-code">
           {token.slice(1, -1)}
         </code>
+      );
+    } else if (token.startsWith("[Source")) {
+      parts.push(
+        <span key={key++} className="source-citation-badge">
+          {token}
+        </span>
       );
     } else {
       const linkMatch = token.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
@@ -31,116 +45,168 @@ function renderInline(text) {
     lastIndex = match.index + token.length;
   }
 
-  if (lastIndex < text.length) {
-    parts.push(text.slice(lastIndex));
+  if (lastIndex < sanitized.length) {
+    parts.push(sanitized.slice(lastIndex));
   }
   return parts;
 }
 
-function splitDualSections(text) {
-  const docSplit = text.split(/^#{1,3}\s*📄[^\n]*\n?/m);
-  const hasDoc = docSplit.length > 1;
-  const afterDoc = hasDoc ? docSplit.slice(1).join("") : text;
-  const ansSplit = afterDoc.split(/^#{1,3}\s*(?:🎯|💬)[^\n]*\n?/m);
-  const hasAnswer = ansSplit.length > 1;
+function parseMarkdownTable(tableLines, keyOffset) {
+  if (tableLines.length < 2) return null;
 
-  if (!hasDoc && !hasAnswer) {
-    return null;
-  }
+  const parseRow = (line) =>
+    line
+      .trim()
+      .replace(/^\||\|$/g, "")
+      .split("|")
+      .map((c) => c.trim());
 
-  const before = (hasDoc ? docSplit[0] : "").trim();
-  const docBody = hasDoc ? ansSplit[0].trim() : "";
-  const answerBody = hasAnswer ? ansSplit.slice(1).join("").trim() : afterDoc.trim();
+  const headerCells = parseRow(tableLines[0]);
+  // Check if second line is markdown separator: |---|---|
+  const isSeparator = /^\|?(\s*:?-+:?\s*\|?)+$/.test(tableLines[1].trim());
+  const bodyRows = (isSeparator ? tableLines.slice(2) : tableLines.slice(1)).map(parseRow);
 
-  return { before, docBody, answerBody, hasDoc, hasAnswer };
+  return (
+    <div key={`table-wrap-${keyOffset}`} className="table-responsive md-table-wrapper">
+      <table className="gpt-styled-table">
+        <thead>
+          <tr>
+            {headerCells.map((h, i) => (
+              <th key={i}>{renderInline(h)}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {bodyRows.map((row, rIdx) => (
+            <tr key={rIdx}>
+              {row.map((cell, cIdx) => (
+                <td key={cIdx}>{renderInline(cell)}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 function MarkdownBlock({ text }) {
   if (!text) return null;
-  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const clean = text
+    .replace(/\r\n/g, "\n")
+    .replace(/\u202f/g, " ")
+    .replace(/\u00a0/g, " ");
+
+  const lines = clean.split("\n");
   const blocks = [];
-  let list = null;
-  let listType = null;
+
+  let currentList = null;
+  let currentListType = null;
+  let currentTable = null;
 
   const flushList = () => {
-    if (!list) return;
-    const Tag = listType === "ol" ? "ol" : "ul";
+    if (!currentList) return;
+    const Tag = currentListType === "ol" ? "ol" : "ul";
     blocks.push(
-      <Tag key={`list-${blocks.length}`} className="md-list">
-        {list.map((item, i) => (
+      <Tag key={`list-${blocks.length}`} className="md-list gpt-list">
+        {currentList.map((item, i) => (
           <li key={i}>{renderInline(item)}</li>
         ))}
       </Tag>
     );
-    list = null;
-    listType = null;
+    currentList = null;
+    currentListType = null;
   };
 
-  lines.forEach((line) => {
-    const heading = line.match(/^(#{1,3})\s+(.*)$/);
-    const ul = line.match(/^[-*]\s+(.*)$/);
-    const ol = line.match(/^\d+\.\s+(.*)$/);
+  const flushTable = () => {
+    if (!currentTable) return;
+    const tableElem = parseMarkdownTable(currentTable, blocks.length);
+    if (tableElem) {
+      blocks.push(tableElem);
+    }
+    currentTable = null;
+  };
 
+  for (let i = 0; i < lines.length; i++) {
+    const rawLine = lines[i];
+    const line = rawLine.trim();
+
+    // Check if line is part of a markdown table (starts and contains |)
+    if (line.startsWith("|") && line.endsWith("|") && line.includes("|")) {
+      flushList();
+      if (!currentTable) currentTable = [];
+      currentTable.push(line);
+      continue;
+    } else {
+      flushTable();
+    }
+
+    // Headings: #, ##, ###, ####
+    const heading = rawLine.match(/^(#{1,4})\s+(.*)$/);
     if (heading) {
       flushList();
       const level = heading[1].length;
-      const Tag = level === 1 ? "h3" : "h4";
+      const Tag = level === 1 ? "h2" : level === 2 ? "h3" : "h4";
       blocks.push(
-        <Tag key={`h-${blocks.length}`} className="md-heading">
+        <Tag key={`h-${blocks.length}`} className={`md-heading gpt-heading h${level}`}>
           {renderInline(heading[2])}
         </Tag>
       );
-    } else if (ul) {
-      if (listType !== "ul") {
-        flushList();
-        list = [];
-        listType = "ul";
-      }
-      list.push(ul[1]);
-    } else if (ol) {
-      if (listType !== "ol") {
-        flushList();
-        list = [];
-        listType = "ol";
-      }
-      list.push(ol[1]);
-    } else if (!line.trim()) {
-      flushList();
-    } else {
-      flushList();
-      blocks.push(
-        <p key={`p-${blocks.length}`} className="md-paragraph">
-          {renderInline(line)}
-        </p>
-      );
+      continue;
     }
-  });
-  flushList();
-  return <div className="markdown-body">{blocks}</div>;
-}
 
-export default function MarkdownMessage({ text }) {
-  const dual = splitDualSections(text || "");
+    // Unordered List item: - or * or •
+    const ul = rawLine.match(/^(\s*)[-*•]\s+(.*)$/);
+    if (ul) {
+      if (currentListType !== "ul") {
+        flushList();
+        currentList = [];
+        currentListType = "ul";
+      }
+      currentList.push(ul[2]);
+      continue;
+    }
 
-  if (!dual) {
-    return <MarkdownBlock text={text} />;
+    // Ordered List item: 1. or 2)
+    const ol = rawLine.match(/^(\s*)\d+[.)]\s+(.*)$/);
+    if (ol) {
+      if (currentListType !== "ol") {
+        flushList();
+        currentList = [];
+        currentListType = "ol";
+      }
+      currentList.push(ol[2]);
+      continue;
+    }
+
+    // Empty blank line
+    if (!line) {
+      flushList();
+      continue;
+    }
+
+    // Regular text paragraph
+    flushList();
+    blocks.push(
+      <p key={`p-${blocks.length}`} className="md-paragraph gpt-paragraph">
+        {renderInline(rawLine)}
+      </p>
+    );
   }
 
+  flushList();
+  flushTable();
+
+  return <div className="gpt-clean-markdown-body">{blocks}</div>;
+}
+
+export default function MarkdownMessage({ text, content }) {
+  const rawText = (text || content || "").trim();
+  if (!rawText) return null;
+
   return (
-    <div className="dual-response-stack">
-      {dual.before ? <MarkdownBlock text={dual.before} /> : null}
-      {dual.hasDoc && (
-        <section className="dual-section doc-section">
-          <div className="dual-section-label">Document explanation</div>
-          <MarkdownBlock text={dual.docBody} />
-        </section>
-      )}
-      {dual.hasAnswer && (
-        <section className="dual-section answer-section">
-          <div className="dual-section-label">Chat answer</div>
-          <MarkdownBlock text={dual.answerBody} />
-        </section>
-      )}
+    <div className="gpt-official-message-card">
+      <MarkdownBlock text={rawText} />
     </div>
   );
 }
