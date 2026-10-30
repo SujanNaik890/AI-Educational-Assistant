@@ -36,7 +36,7 @@ OLLAMA_MODEL_NAME = os.getenv("OLLAMA_MODEL_NAME", "llama3.2:3b")
 
 # Groq settings for cloud deployment
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
-GROQ_MODEL_NAME = os.getenv("GROQ_MODEL_NAME", "openai/gpt-oss-20b")
+GROQ_MODEL_NAME = os.getenv("GROQ_MODEL_NAME", "llama-3.3-70b-versatile")
 
 # Keep MODEL_NAME for existing imports while exposing the selected model clearly.
 ACTIVE_MODEL_NAME = {
