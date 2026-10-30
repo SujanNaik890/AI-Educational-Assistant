@@ -326,6 +326,28 @@ class VectorStoreManager:
                 )
                 return doc_info
 
+    def clear_active_document(self) -> None:
+        with self._lock:
+            with InterProcessLock(self.lock_path):
+                self.index = None
+                self.metadata = []
+                self.current_doc = None
+                self.active_manifest = None
+                if self.manifest_path.exists():
+                    try:
+                        self.manifest_path.unlink()
+                    except Exception:
+                        pass
+                for f in [self.storage_dir / 'current.index',
+                          self.storage_dir / 'current_metadata.json',
+                          self.storage_dir / 'current_document.json']:
+                    if f.exists():
+                        try:
+                            f.unlink()
+                        except Exception:
+                            pass
+                logger.info('[VectorStoreManager] Cleared active document.')
+
     def search(self, query_embedding: np.ndarray, top_k: int = 4) -> List[Dict[str, Any]]:
         """
         Searches the in-memory FAISS index and returns matched chunks with similarity scores.

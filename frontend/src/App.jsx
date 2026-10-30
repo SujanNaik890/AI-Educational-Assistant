@@ -206,6 +206,26 @@ Please explain what is on this screen in simple, clear terms:
     fetchStatus();
   };
 
+  const handleRemoveDoc = async () => {
+    try {
+      await axios.delete(`${API_BASE}/current-document`);
+      setCurrentDoc(null);
+      setMessages((prev) => [
+        ...prev,
+        {
+          sender: "bot",
+          text: "🗑️ **PDF document unpinned.** You are now in general educational chat mode. You can attach a new document anytime or continue asking questions!",
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        },
+      ]);
+      fetchStatus();
+    } catch (err) {
+      console.error("Failed to remove document:", err);
+      // Local optimistic reset
+      setCurrentDoc(null);
+    }
+  };
+
   const handleCourseClick = (courseName) => {
     setSelectedCourse(courseName);
     setIsEduPilotOpen(true);
@@ -278,6 +298,7 @@ Please explain what is on this screen in simple, clear terms:
           onReadScreen={handleReadScreen}
           isReadingScreen={isReadingScreen}
           onOpenFileUpload={() => setIsUploadOpen(true)}
+          onRemoveDoc={handleRemoveDoc}
           currentDoc={currentDoc}
           onReadAloud={(text) => speakText(text, speechRate)}
           isSpeaking={isSpeaking}

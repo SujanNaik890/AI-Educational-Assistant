@@ -11,6 +11,7 @@ export default function EduPilotDrawer({
   onReadScreen,
   isReadingScreen,
   onOpenFileUpload,
+  onRemoveDoc,
   currentDoc,
   onReadAloud,
   isSpeaking,
@@ -155,12 +156,25 @@ export default function EduPilotDrawer({
 
       {/* Drawer Footer Input Bar */}
       <div className="drawer-footer">
-        {/* Document Context Chip if uploaded */}
+        {/* Document Context Chip if uploaded with Cancel Button */}
         {currentDoc && currentDoc.status === "ready" && (
           <div className="drawer-doc-context-chip">
             <span className="doc-icon">📎</span>
-            <span className="doc-name">{currentDoc.filename} ({currentDoc.pages}p)</span>
+            <span className="doc-name" title={currentDoc.filename}>
+              {currentDoc.filename} ({currentDoc.pages}p)
+            </span>
             <span className="doc-badge">RAG Active</span>
+            <button
+              type="button"
+              className="doc-cancel-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onRemoveDoc) onRemoveDoc();
+              }}
+              title="Remove PDF and return to normal chat"
+            >
+              ✕
+            </button>
           </div>
         )}
 

@@ -135,6 +135,14 @@ def get_current_document():
         headers={"Content-Type": "application/json; charset=utf-8"}
     )
 
+@app.delete("/current-document")
+def delete_current_document():
+    vector_store.clear_active_document()
+    return JSONResponse(
+        content={"success": True, "message": "Document removed. Chat returned to general AI assistant mode."},
+        headers={"Content-Type": "application/json; charset=utf-8"}
+    )
+
 @app.post("/upload-pdf")
 async def upload_pdf(file: UploadFile = File(...)):
     if not file.filename or not file.filename.lower().endswith(".pdf"):
